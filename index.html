@@ -4,6 +4,8 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Katale Flow</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 <!-- PWA Meta Tags -->
 <meta name="description" content="Uganda cross-border trade manager — expenses, sales, profit"/>
@@ -271,6 +273,13 @@ input:focus,select:focus{outline:none;border-color:#1a3a1a;background:#fff}
         </select>
       </div>
       <div style="margin-bottom:.65rem">
+        <label style="font-size:.68rem;font-weight:600;color:#a8c5a0;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px">Exchange Rate <span style="font-weight:400;font-size:.65rem;text-transform:none;opacity:.8">— leave blank for default</span></label>
+        <div style="display:flex;align-items:center;border:1.5px solid #2d6a2d;border-radius:7px;background:#1a3a1a;overflow:hidden">
+          <span id="agent-rate-lbl" style="padding:0 .6rem;font-size:.73rem;font-weight:600;color:#a8c5a0;background:#0d1f0d;height:100%;display:flex;align-items:center;border-right:1.5px solid #2d6a2d;white-space:nowrap;min-height:37px">1 KES =</span>
+          <input id="agent-rate" type="number" step="0.001" placeholder="default: 29 / 1.45" style="border:none;background:transparent;padding:.55rem .65rem;font-size:.9rem;color:#f5ede0;width:100%;font-family:inherit"/>
+        </div>
+      </div>
+      <div style="margin-bottom:.65rem">
         <label style="font-size:.68rem;font-weight:600;color:#a8c5a0;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px">Commodity</label>
         <input id="agent-commodity" type="text" value="Onions" style="width:100%;padding:.55rem .75rem;border:1.5px solid #2d6a2d;border-radius:7px;font-size:.9rem;background:#1a3a1a;color:#f5ede0;font-family:inherit"/>
       </div>
@@ -447,8 +456,8 @@ input:focus,select:focus{outline:none;border-color:#1a3a1a;background:#fff}
   <div id="step3" style="display:none">
     <div class="btn-row" style="margin-bottom:1rem">
       <button class="btn btn-lt" onclick="goStep(2)">← Edit</button>
-      <button class="btn btn-dk" onclick="window.print()">🖨 Print</button>
-      <button class="btn btn-gd" id="btn-wa">💬 WhatsApp</button>
+      <button class="btn btn-dk" onclick="printReceipt('pdf')">⬇ PDF</button>
+      <button class="btn btn-gd" id="btn-wa-receipt" onclick="printReceipt('whatsapp')">💬 WhatsApp</button>
       <button class="btn btn-sv" id="btn-save">💾 Save Trip</button>
       <button class="btn btn-lt" id="btn-new-trip" onclick="doNew()" style="color:#2d6a2d;border-color:#2d6a2d">+ New Trip</button>
     </div>
@@ -631,21 +640,28 @@ input:focus,select:focus{outline:none;border-color:#1a3a1a;background:#fff}
   <div id="mc-cpb-box" style="display:none"><div class="cpc"><span class="cl">Market cost per bag</span><span class="cv" id="mc-cpb">—</span></div></div>
 
   <!-- Report Buttons -->
-  <div style="margin-top:1rem;display:flex;flex-direction:column;gap:.6rem">
-    <div style="display:flex;gap:.6rem;flex-wrap:wrap">
-      <button class="btn btn-dk" style="flex:1;min-width:140px" onclick="printReport('agent')">
-        <span data-i18n="btn_agent_report">🖨 Agent Report</span>
-      </button>
-      <button class="btn" style="flex:1;min-width:140px;background:#2d6a2d;color:#fff" onclick="printReport('trader')">
-        <span data-i18n="btn_trader_report">🖨 Trader Report</span>
-      </button>
-      <button class="btn btn-wa" id="btn-mkt-wa" style="flex:1;min-width:120px">💬 WhatsApp</button>
+  <div style="margin-top:1rem;display:flex;flex-direction:column;gap:.75rem">
+
+    <!-- Agent Report -->
+    <div style="background:#f5f9f0;border:1.5px solid #b8d4b8;border-radius:10px;padding:.75rem">
+      <div style="font-size:.72rem;font-weight:700;color:#1a3a1a;margin-bottom:.5rem">🖨 Agent Report <span style="font-weight:400;color:#7a6e5f">— Full record for market agent</span></div>
+      <div style="display:flex;gap:.5rem">
+        <button class="btn btn-dk" style="flex:1" onclick="printReport('agent')">⬇ PDF</button>
+        <button class="btn btn-gd" style="flex:1" id="btn-agent-wa" onclick="shareReportImage('agent')">💬 WhatsApp</button>
+      </div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem">
-      <div style="font-size:.7rem;color:#7a6e5f;line-height:1.4;text-align:center" data-i18n="agent_report_desc">Full record — sales, credit extended, cash to remit. For Market Agent.</div>
-      <div style="font-size:.7rem;color:#7a6e5f;line-height:1.4;text-align:center" data-i18n="trader_report_desc">Clean summary — total sales &amp; net amount only. For Foreign Trader.</div>
-      <div style="font-size:.7rem;color:#7a6e5f;line-height:1.4;text-align:center">Sends trader report via WhatsApp.</div>
+
+    <!-- Trader Report -->
+    <div style="background:#f5f9f0;border:1.5px solid #b8d4b8;border-radius:10px;padding:.75rem">
+      <div style="font-size:.72rem;font-weight:700;color:#1a3a1a;margin-bottom:.5rem">🖨 Trader Report <span style="font-weight:400;color:#7a6e5f">— Clean summary for foreign trader</span></div>
+      <div style="display:flex;gap:.5rem">
+        <button class="btn" style="flex:1;background:#2d6a2d;color:#fff" onclick="printReport('trader')">⬇ PDF</button>
+        <button class="btn btn-gd" style="flex:1" id="btn-trader-wa" onclick="shareReportImage('trader')">💬 WhatsApp</button>
+      </div>
     </div>
+
+    <!-- Legacy WA button hidden but kept for WA text logic -->
+    <button id="btn-mkt-wa" style="display:none"></button>
   </div>
 
 </div>
@@ -950,7 +966,7 @@ function attachListeners() {
     goStep(3);
   });
   $('btn-save').addEventListener('click', doSaveTrip);
-  $('btn-wa').addEventListener('click', doWA);
+  
   $('hist-open-btn').addEventListener('click', toggleHistory);
   $('hist-close-btn').addEventListener('click', toggleHistory);
   $('hist-overlay').addEventListener('click', toggleHistory);
@@ -1705,20 +1721,262 @@ function _doBuildMarketReport() {
   }
 } // end _doBuildMarketReport
 
+function printReceipt(format) {
+  const c = calc();
+  if (!c.numBags || !c.totalExp) { alert('Please complete the expense form first.'); return; }
+
+  if (format === 'whatsapp') {
+    const c = calc();
+    if (!c.numBags || !c.totalExp) { alert('Generate the receipt first.'); return; }
+    const btn = $('btn-wa-receipt');
+    if (btn) { btn.textContent = '⏳ Saving...'; btn.disabled = true; }
+
+    // Build a narrow portrait receipt div for clean mobile PNG
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'position:fixed;left:-9999px;top:0;width:420px;background:#fff;font-family:-apple-system,BlinkMacSystemFont,sans-serif;';
+    wrap.innerHTML = `
+      <div style="background:#1a3a1a;padding:18px 20px 14px">
+        <div style="font-size:13px;font-weight:700;letter-spacing:.08em;color:#f5ede0">IMPORT EXPENSE RECEIPT</div>
+        <div style="font-size:9px;color:#a8c5a0;margin-top:3px">UGANDA CROSS-BORDER TRADE — ${val('f-country').toUpperCase()} ROUTE</div>
+        <div style="font-size:9px;color:#c9a84c;margin-top:2px">Katale Flow · ${todayDisp()}</div>
+      </div>
+      <div style="background:#f5f9f0;padding:12px 20px;display:grid;grid-template-columns:1fr 1fr;gap:8px;border-bottom:1px solid #d4c9b8">
+        ${[
+          ['Commodity', val('f-commodity')],
+          ['Origin', val('f-country')],
+          ['No. of Bags', fmt(c.numBags)+' bags'],
+          ['Price/Bag', c.oc+' '+fmtD(c.ppBag)],
+          ['Exchange Rate', '1 '+c.oc+' = '+fmtD(c.rate)+' UGX'],
+          ['Vehicle', val('f-vehicleNo')||'—'],
+          ['Prepared by', val('f-yourName')||'—'],
+          ['Submitted to', val('f-bossName')||'—'],
+        ].map(([k,v])=>`<div><div style="font-size:8px;font-weight:600;color:#7a6e5f;text-transform:uppercase;letter-spacing:.04em">${k}</div><div style="font-size:10px;font-weight:500;color:#1a2e1a;margin-top:2px">${v}</div></div>`).join('')}
+      </div>
+      <div style="padding:14px 20px">
+        <div style="font-size:9px;font-weight:700;color:#7a6e5f;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Cost Breakdown</div>
+        ${[
+          [`Purchase (${fmt(c.numBags)} bags × ${c.oc} ${fmtD(c.ppBag)})`, fmt(c.buyUGX)],
+          [`Border Tax${c.btCur!=='UGX'?' ('+c.btCur+' '+fmtD(c.btRaw)+')':''}`, fmt(c.btUGX)],
+          [`Truck Hire${c.thCur!=='UGX'?' ('+c.thCur+' '+fmtD(c.thRaw)+')':''}`, fmt(c.thUGX)],
+          ...(c.ocRaw>0 ? [['Other Costs', fmt(c.ocUGX)]] : []),
+        ].map(([label,amt],i)=>`
+          <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f0ebe3;font-size:10px">
+            <span style="color:#3a3a3a">${label}</span>
+            <span style="font-family:monospace;font-weight:600;color:#1a2e1a">UGX ${amt}</span>
+          </div>`).join('')}
+        ${c.numBags>0?`<div style="display:flex;justify-content:space-between;padding:7px 0;font-size:10px;background:#f5f9f0;margin:0 -4px;padding:7px 4px;border-radius:4px;margin-top:4px">
+          <span style="color:#2d6a2d;font-weight:600">All-in cost per bag</span>
+          <span style="font-family:monospace;font-weight:700;color:#2d6a2d">UGX ${fmt(c.cpb)}</span>
+        </div>`:''}
+      </div>
+      <div style="background:#1a3a1a;padding:14px 20px;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:9px;font-weight:600;color:#a8c5a0;text-transform:uppercase;letter-spacing:.06em">Total Business Expenses</div>
+          <div style="font-family:monospace;font-size:22px;font-weight:500;color:#c9a84c;margin-top:4px">UGX ${fmt(c.totalExp)}</div>
+        </div>
+        <div style="font-size:9px;font-weight:700;letter-spacing:.12em;color:#2d6a2d;border:1.5px solid #2d6a2d;padding:4px 10px;border-radius:4px">PREPARED</div>
+      </div>`;
+    document.body.appendChild(wrap);
+
+    html2canvas(wrap, { scale:3, backgroundColor:'#ffffff', useCORS:true, logging:false })
+    .then(canvas => {
+      document.body.removeChild(wrap);
+      const caption = `*IMPORT EXPENSE RECEIPT*\nCommodity: ${val('f-commodity')} | Origin: ${val('f-country')}\nBags: ${fmt(c.numBags)} | Total: UGX ${fmt(c.totalExp)}\nDate: ${todayDisp()}\n_Sent via Katale Flow_`;
+
+      canvas.toBlob(blob => {
+        const file = new File([blob], 'KataleFlow-Receipt.png', {type:'image/png'});
+        if (navigator.canShare && navigator.canShare({files:[file]})) {
+          navigator.share({files:[file], text:caption})
+          .catch(() => fallbackWA(canvas, caption));
+        } else {
+          fallbackWA(canvas, caption);
+        }
+        if (btn) { btn.textContent = '💬 WhatsApp'; btn.disabled = false; }
+      }, 'image/png');
+    })
+    .catch(() => {
+      if (document.body.contains(wrap)) document.body.removeChild(wrap);
+      alert('Could not save image. Try PDF instead.');
+      if (btn) { btn.textContent = '💬 WhatsApp'; btn.disabled = false; }
+    });
+    return;
+  }
+
+  function fallbackWA(canvas, caption) {
+    const link = document.createElement('a');
+    link.download = 'KataleFlow-Receipt.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    setTimeout(() => window.open('https://wa.me/?text='+encodeURIComponent(caption),'_blank'), 800);
+  }
+
+  if (format === 'word') {
+    // Word export — HTML saved as .doc (Word opens it perfectly)
+    const rno = 'RCT-' + Date.now().toString().slice(-6);
+    const wordHtml = `<html xmlns:o='urn:schemas-microsoft-com:office:office'
+      xmlns:w='urn:schemas-microsoft-com:office:word'
+      xmlns='http://www.w3.org/TR/REC-html40'>
+    <head><meta charset='UTF-8'>
+    <style>
+      body{font-family:Arial,sans-serif;font-size:11pt;color:#1a2e1a;margin:2cm}
+      h1{font-size:14pt;font-weight:bold;color:#1a3a1a;margin-bottom:4pt}
+      .sub{font-size:9pt;color:#555;margin-bottom:16pt}
+      table{width:100%;border-collapse:collapse;font-size:10pt}
+      th{background:#1a3a1a;color:white;padding:6pt 8pt;text-align:left;font-size:9pt}
+      td{padding:5pt 8pt;border-bottom:1pt solid #e0e0e0}
+      .meta-table td{width:50%;vertical-align:top;padding:4pt 6pt}
+      .meta-k{font-size:8pt;font-weight:bold;color:#7a6e5f;text-transform:uppercase}
+      .meta-v{font-size:10pt;color:#1a2e1a}
+      .total-row{background:#1a3a1a;color:white;font-weight:bold;font-size:13pt}
+      .total-row td{color:white;padding:8pt}
+      .cpb-row{background:#f0f8f0;color:#2d6a2d;font-weight:bold}
+      .amount{text-align:right;font-family:monospace}
+    </style></head>
+    <body>
+    <h1>IMPORT EXPENSE RECEIPT</h1>
+    <div class="sub">UGANDA CROSS-BORDER TRADE — ${val('f-country').toUpperCase()} ROUTE &nbsp;·&nbsp; Katale Flow</div>
+    <table class="meta-table" style="margin-bottom:14pt">
+      <tr><td><div class="meta-k">Receipt No.</div><div class="meta-v">${rno}</div></td>
+          <td><div class="meta-k">Date</div><div class="meta-v">${todayDisp()}</div></td></tr>
+      <tr><td><div class="meta-k">Prepared by</div><div class="meta-v">${val('f-yourName')||'—'}</div></td>
+          <td><div class="meta-k">Submitted to</div><div class="meta-v">${val('f-bossName')||'—'}</div></td></tr>
+      <tr><td><div class="meta-k">Vehicle No.</div><div class="meta-v">${val('f-vehicleNo')||'—'}</div></td>
+          <td><div class="meta-k">Origin</div><div class="meta-v">${val('f-country')}</div></td></tr>
+      <tr><td><div class="meta-k">Commodity</div><div class="meta-v">${val('f-commodity')}</div></td>
+          <td><div class="meta-k">No. of Bags</div><div class="meta-v">${fmt(c.numBags)} bags</div></td></tr>
+      <tr><td><div class="meta-k">Price/Bag (${c.oc})</div><div class="meta-v">${c.oc} ${fmtD(c.ppBag)}</div></td>
+          <td><div class="meta-k">Exchange Rate</div><div class="meta-v">1 ${c.oc} = ${fmtD(c.rate)} UGX</div></td></tr>
+    </table>
+    <table>
+      <thead><tr><th>Description</th><th class="amount">Amount (UGX)</th></tr></thead>
+      <tbody>
+        <tr><td>Purchase (${fmt(c.numBags)} bags × ${c.oc} ${fmtD(c.ppBag)}/bag)</td><td class="amount">${fmt(c.buyUGX)}</td></tr>
+        <tr><td>Border Tax${c.btCur!=='UGX'?' ('+c.btCur+' '+fmtD(c.btRaw)+')':''}</td><td class="amount">${fmt(c.btUGX)}</td></tr>
+        <tr><td>Truck Hire${c.thCur!=='UGX'?' ('+c.thCur+' '+fmtD(c.thRaw)+')':''}</td><td class="amount">${fmt(c.thUGX)}</td></tr>
+        ${c.ocRaw>0?`<tr><td>Other Costs</td><td class="amount">${fmt(c.ocUGX)}</td></tr>`:''}
+        ${c.numBags>0?`<tr class="cpb-row"><td>All-in cost per bag</td><td class="amount">${fmt(c.cpb)} UGX</td></tr>`:''}
+        <tr class="total-row"><td>TOTAL BUSINESS EXPENSES</td><td class="amount">UGX ${fmt(c.totalExp)}</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:14pt;font-size:8pt;color:#999">All amounts in Uganda Shillings (UGX) · ${todayDisp()}</p>
+    </body></html>`;
+
+    const blob = new Blob([wordHtml], {type:'application/msword'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'KataleFlow-Receipt-'+rno+'.doc';
+    a.click();
+    return;
+  }
+
+  // PDF export via jsPDF
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'mm', format:'a4' });
+
+  const W = 210, M = 15, CW = W - M*2;
+  let y = 0;
+
+  // Header bar
+  doc.setFillColor(26, 58, 26);
+  doc.rect(0, 0, W, 28, 'F');
+  doc.setTextColor(245, 237, 224);
+  doc.setFontSize(13); doc.setFont('helvetica','bold');
+  doc.text('IMPORT EXPENSE RECEIPT', M, 11);
+  doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.setTextColor(168, 197, 160);
+  doc.text('UGANDA CROSS-BORDER TRADE — ' + val('f-country').toUpperCase() + ' ROUTE', M, 18);
+  doc.setTextColor(201, 168, 76);
+  doc.text('Katale Flow', W - M, 11, {align:'right'});
+  y = 34;
+
+  // Meta grid
+  const rno = 'RCT-' + Date.now().toString().slice(-6);
+  const meta = [
+    ['Receipt No.', rno], ['Date', todayDisp()],
+    ['Prepared by', val('f-yourName')||'—'], ['Submitted to', val('f-bossName')||'—'],
+    ['Vehicle No.', val('f-vehicleNo')||'—'], ['Origin', val('f-country')],
+    ['Commodity', val('f-commodity')], ['No. of Bags', fmt(c.numBags)+' bags'],
+    ['Price/Bag ('+c.oc+')', c.oc+' '+fmtD(c.ppBag)], ['Exchange Rate', '1 '+c.oc+' = '+fmtD(c.rate)+' UGX'],
+  ];
+  doc.setFillColor(245, 249, 240);
+  doc.rect(M, y-3, CW, meta.length/2*8+6, 'F');
+  doc.setDrawColor(212, 201, 184); doc.rect(M, y-3, CW, meta.length/2*8+6);
+  meta.forEach(([k,v], idx) => {
+    const col = idx % 2; const row = Math.floor(idx/2);
+    const x = M + col * (CW/2) + 3;
+    const ry = y + row*8;
+    doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(122,110,95);
+    doc.text(k.toUpperCase(), x, ry);
+    doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(26,46,26);
+    doc.text(String(v), x, ry+4.5);
+  });
+  y += Math.ceil(meta.length/2)*8 + 8;
+
+  // Cost table header
+  doc.setFillColor(26,58,26);
+  doc.rect(M, y, CW, 7, 'F');
+  doc.setTextColor(245,237,224); doc.setFontSize(8); doc.setFont('helvetica','bold');
+  doc.text('Description', M+3, y+5);
+  doc.text('Amount (UGX)', W-M-3, y+5, {align:'right'});
+  y += 9;
+
+  // Cost rows
+  const rows = [
+    [`Purchase (${fmt(c.numBags)} bags × ${c.oc} ${fmtD(c.ppBag)}/bag)`, fmt(c.buyUGX)],
+    [`Border Tax${c.btCur!=='UGX'?' ('+c.btCur+' '+fmtD(c.btRaw)+')':''}`, fmt(c.btUGX)],
+    [`Truck Hire${c.thCur!=='UGX'?' ('+c.thCur+' '+fmtD(c.thRaw)+')':''}`, fmt(c.thUGX)],
+  ];
+  if (c.ocRaw > 0) rows.push(['Other Costs', fmt(c.ocUGX)]);
+
+  rows.forEach(([label, amount], i) => {
+    if (i % 2 === 0) { doc.setFillColor(255,255,255); } else { doc.setFillColor(250,248,245); }
+    doc.rect(M, y-1, CW, 7, 'F');
+    doc.setDrawColor(240,235,227); doc.line(M, y+6, M+CW, y+6);
+    doc.setTextColor(26,46,26); doc.setFontSize(9); doc.setFont('helvetica','normal');
+    doc.text(label, M+3, y+4);
+    doc.setFont('helvetica','bold');
+    doc.text(amount, W-M-3, y+4, {align:'right'});
+    y += 7;
+  });
+
+  // Cost per bag row
+  if (c.numBags > 0) {
+    doc.setFillColor(245,249,240); doc.rect(M, y-1, CW, 7, 'F');
+    doc.setTextColor(45,106,45); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text('All-in cost per bag', M+3, y+4);
+    doc.text(fmt(c.cpb)+' UGX', W-M-3, y+4, {align:'right'});
+    y += 10;
+  }
+
+  // Total bar
+  doc.setFillColor(26,58,26); doc.rect(M, y, CW, 12, 'F');
+  doc.setTextColor(168,197,160); doc.setFontSize(8); doc.setFont('helvetica','bold');
+  doc.text('TOTAL BUSINESS EXPENSES', M+4, y+5);
+  doc.setTextColor(201,168,76); doc.setFontSize(14);
+  doc.text('UGX '+fmt(c.totalExp), W-M-4, y+9, {align:'right'});
+  y += 16;
+
+  // Footer
+  doc.setFontSize(7); doc.setTextColor(150,140,130); doc.setFont('helvetica','normal');
+  doc.text('All amounts in Uganda Shillings (UGX) · '+todayDisp(), M, y);
+  doc.setTextColor(45,106,45); doc.setFont('helvetica','bold');
+  doc.text('PREPARED', W-M, y, {align:'right'});
+
+  doc.save('KataleFlow-Receipt-'+rno+'.pdf');
+}
+
 function printReport(type) {
   const el = type === 'agent' ? $('agent-report') : $('trader-report');
   if (!el || !el.innerHTML.trim()) { alert('Generate the report first by entering sales data.'); return; }
 
-  const w = window.open('', '_blank', 'width=800,height=600');
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/>
-  <style>
+  const printStyles = `
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#fff;color:#1a2e1a;padding:0}
     .rcpt{background:#fff;border:none;box-shadow:none;border-radius:0;padding:1.5rem}
-    .rcpt-hd{background:#1a3a1a;color:#f5ede0;padding:1.1rem 1.5rem;border-radius:0}
+    .rcpt-hd{background:#1a3a1a;color:#f5ede0;padding:1.1rem 1.5rem;border-radius:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     .brand{font-size:1.1rem;font-weight:700;letter-spacing:.08em}
     .sub{font-size:.75rem;color:#a8c5a0;margin-top:3px}
-    .rcpt-meta{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;padding:.85rem 1.5rem;background:#f5f9f0;border-bottom:1px solid #d4c9b8}
+    .rcpt-meta{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;padding:.85rem 1.5rem;background:#f5f9f0;border-bottom:1px solid #d4c9b8;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     .rmi .k{font-size:.65rem;text-transform:uppercase;letter-spacing:.06em;color:#7a6e5f;font-weight:600}
     .rmi .v{font-size:.82rem;font-weight:500;color:#1a2e1a;margin-top:1px}
     .rcpt-body{padding:1rem 1.5rem}
@@ -1727,20 +1985,203 @@ function printReport(type) {
     td{padding:.42rem .5rem;border-bottom:1px solid #f0ebe3}
     .rt{text-align:right}
     .mn{font-family:monospace}
-    .rcpt-tot{background:#1a3a1a;color:#f5ede0;padding:.85rem 1.5rem;display:flex;flex-direction:column;gap:5px}
+    .rcpt-tot{background:#1a3a1a;color:#f5ede0;padding:.85rem 1.5rem;display:flex;flex-direction:column;gap:5px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     .tl{font-size:.75rem;font-weight:600;color:#a8c5a0;text-transform:uppercase;letter-spacing:.06em}
     .tv{font-family:monospace;font-size:1.4rem;font-weight:500;color:#c9a84c}
     .rcpt-ft{display:flex;justify-content:space-between;align-items:center;padding:.65rem 1.5rem;background:#f5f9f0;border-top:1px solid #d4c9b8;font-size:.7rem;color:#7a6e5f}
     .stamp{font-size:.65rem;font-weight:700;letter-spacing:.12em;color:#2d6a2d;border:1.5px solid #2d6a2d;padding:2px 8px;border-radius:4px}
-    @media print{
-      body{padding:0}
-      @page{margin:10mm}
-    }
-  </style>
+    @page{margin:10mm}`;
+
+  // Remove any existing print iframe
+  const old = document.getElementById('print-iframe');
+  if (old) old.remove();
+
+  // Create hidden iframe
+  const iframe = document.createElement('iframe');
+  iframe.id = 'print-iframe';
+  iframe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;border:none;visibility:hidden;';
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentDocument || iframe.contentWindow.document;
+  doc.open();
+  doc.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <style>${printStyles}</style>
   </head><body>${el.innerHTML}</body></html>`);
-  w.document.close();
-  w.focus();
-  setTimeout(() => { w.print(); w.close(); }, 400);
+  doc.close();
+
+  // Wait for content to load then print
+  iframe.onload = function() {
+    setTimeout(() => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      setTimeout(() => iframe.remove(), 1000);
+    }, 300);
+  };
+}
+
+function shareReportImage(type) {
+  const m = mktCalc();
+  const rev = salesRevenue();
+  const credit = creditTotal();
+  const cash = numRaw('cash-collected');
+  const cashRemitted = numRaw('cash-remitted');
+  const cashToRemit = cashRemitted > 0 ? cashRemitted : Math.max(0, cash - m.total);
+  const commodity = val('f-commodity') || 'Goods';
+  const country = val('f-country') || '';
+  const entryDate = val('s-date');
+  const preparedBy = val('s-prepared-by') || val('f-yourName') || '—';
+  const vehicleNo = val('s-vehicle-plate') || val('f-vehicleNo') || '';
+  const sold = salesTotalSold();
+  const numBags = calc().numBags;
+  const netAfterMkt = rev - m.total;
+  const c = calc();
+
+  const btnId = type === 'agent' ? 'btn-agent-wa' : 'btn-trader-wa';
+  const btn = $(btnId);
+  if (btn) { btn.textContent = '⏳ Saving...'; btn.disabled = true; }
+
+  // Build sales rows
+  let salesRowsHtml = '';
+  salesDays.forEach((day, i) => {
+    const tot = dayTotal(day);
+    const r = dayRev(day, i);
+    const mp = day.priceOverride !== null ? day.priceOverride : salesSugPrice(i);
+    if (tot > 0 || i < 3) {
+      salesRowsHtml += `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0ebe3;font-size:10px">
+        <span style="color:#5a5043">${entryDate ? fmtDate(getDayDate(i)) : 'Day '+(i+1)}</span>
+        <span style="color:#7a6e5f">${fmt(Math.round(mp))}</span>
+        <span style="color:#1a2e1a;font-weight:600">${tot} bags</span>
+        <span style="font-family:monospace;color:#1a7a1a;font-weight:700">${r>0?'UGX '+fmt(r):'—'}</span>
+      </div>`;
+    }
+  });
+
+  // Cost rows
+  let costRowsHtml = '';
+  const costs = [
+    ['Driver Welfare', m.driver], ['Parking', m.parking], ['Security', m.security],
+    ['Labour', m.labour], ['Offloading', m.cess], ['Storage', m.storage],
+  ];
+  if (m.truckhire > 0) costs.unshift(['Truck Hire', m.truckhire]);
+  const otherLbl = val('mc-other-label') || 'Other';
+  if (m.other > 0) costs.push([otherLbl, m.other]);
+  costs.filter(([,v]) => v > 0).forEach(([k,v]) => {
+    costRowsHtml += `<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:10px;border-bottom:1px solid #f0ebe3">
+      <span style="color:#5a5043">${k}</span>
+      <span style="font-family:monospace;color:#b82020">– UGX ${fmt(v)}</span>
+    </div>`;
+  });
+
+  // Credit rows (agent only)
+  let creditRowsHtml = '';
+  if (type === 'agent' && credit > 0) {
+    creditRowsHtml = `<div style="background:#fff8f0;border:1px solid #f09595;border-radius:8px;padding:10px;margin-top:8px">
+      <div style="font-size:9px;font-weight:700;color:#b82020;text-transform:uppercase;margin-bottom:6px">⚠ Outstanding Credit</div>
+      ${creditEntries.filter(e=>(e.amount||0)>0).map(e=>`
+        <div style="display:flex;justify-content:space-between;font-size:10px;padding:4px 0;border-bottom:1px solid #fde8e8">
+          <span>${e.buyer||'—'}</span>
+          <span style="font-family:monospace;font-weight:700;color:#b82020">UGX ${fmt(e.amount)}</span>
+        </div>`).join('')}
+      <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;padding:6px 0 0;color:#b82020">
+        <span>Total Outstanding</span><span style="font-family:monospace">UGX ${fmt(credit)}</span>
+      </div>
+    </div>`;
+  }
+
+  const isAgent = type === 'agent';
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'position:fixed;left:-9999px;top:0;width:420px;background:#fff;font-family:-apple-system,BlinkMacSystemFont,sans-serif;';
+  wrap.innerHTML = `
+    <div style="background:#1a3a1a;padding:16px 20px 12px">
+      <div style="font-size:12px;font-weight:700;letter-spacing:.07em;color:#f5ede0">${isAgent ? 'MARKET AGENT REPORT' : 'MARKET SALES REPORT'}</div>
+      <div style="font-size:9px;color:#a8c5a0;margin-top:2px">${commodity.toUpperCase()} — ${country.toUpperCase()}${isAgent?' · FOR AGENT USE':' · FOR TRADER'}</div>
+      <div style="font-size:9px;color:#c9a84c;margin-top:2px">Katale Flow · ${todayDisp()}</div>
+    </div>
+    <div style="background:#f5f9f0;padding:10px 20px;display:grid;grid-template-columns:1fr 1fr;gap:7px;border-bottom:1px solid #d4c9b8">
+      ${[
+        ['Commodity', commodity], ['Origin', country],
+        ['Total Bags', fmt(numBags)+' bags'], ...(isAgent?[['Bags Sold', sold+' of '+fmt(numBags)]]:[] ),
+        ['Prepared by', preparedBy], ...(vehicleNo?[['Vehicle', vehicleNo]]:[]),
+      ].map(([k,v])=>`<div><div style="font-size:8px;font-weight:600;color:#7a6e5f;text-transform:uppercase">${k}</div><div style="font-size:10px;font-weight:500;color:#1a2e1a;margin-top:1px">${v}</div></div>`).join('')}
+    </div>
+    <div style="padding:12px 20px">
+      <div style="font-size:9px;font-weight:700;color:#7a6e5f;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Daily Sales</div>
+      <div style="display:flex;justify-content:space-between;font-size:8px;font-weight:600;color:#9a8e7f;padding-bottom:4px;border-bottom:1.5px solid #1a3a1a">
+        <span>Date</span><span>Price</span><span>Bags</span><span>Revenue</span>
+      </div>
+      ${salesRowsHtml}
+    </div>
+    ${m.total > 0 ? `<div style="padding:4px 20px 12px">
+      <div style="font-size:9px;font-weight:700;color:#7a6e5f;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Market & Delivery Costs</div>
+      ${costRowsHtml}
+    </div>` : ''}
+    ${isAgent ? creditRowsHtml : ''}
+    <div style="background:#1a3a1a;padding:14px 20px">
+      ${isAgent ? `
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:#a8c5a0;margin-bottom:5px">
+          <span>Cash Remitted</span><span style="font-family:monospace;color:#9fe1cb">UGX ${fmt(cashToRemit)}</span>
+        </div>
+        ${credit>0?`<div style="display:flex;justify-content:space-between;font-size:10px;color:#a8c5a0;margin-bottom:5px">
+          <span>Outstanding Credit</span><span style="font-family:monospace;color:#f09595">UGX ${fmt(credit)}</span>
+        </div>`:''}
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:#f09595;margin-bottom:8px">
+          <span>Market Costs</span><span style="font-family:monospace">– UGX ${fmt(m.total)}</span>
+        </div>
+        <div style="border-top:1px solid rgba(255,255,255,.2);padding-top:8px">
+          <div style="font-size:9px;font-weight:600;color:#a8c5a0;text-transform:uppercase;letter-spacing:.06em">Total Revenue</div>
+          <div style="font-family:monospace;font-size:22px;font-weight:500;color:#c9a84c;margin-top:3px">UGX ${fmt(rev)}</div>
+        </div>
+      ` : `
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:#a8c5a0;margin-bottom:5px">
+          <span>Total Revenue</span><span style="font-family:monospace;color:#9fe1cb">UGX ${fmt(rev)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:#f09595;margin-bottom:8px">
+          <span>Market Costs</span><span style="font-family:monospace">– UGX ${fmt(m.total)}</span>
+        </div>
+        <div style="border-top:1px solid rgba(255,255,255,.2);padding-top:8px">
+          <div style="font-size:9px;font-weight:600;color:#a8c5a0;text-transform:uppercase;letter-spacing:.06em">Net to Trader</div>
+          <div style="font-family:monospace;font-size:22px;font-weight:500;color:#c9a84c;margin-top:3px">UGX ${fmt(netAfterMkt)}</div>
+          ${c.rate>0?`<div style="font-size:9px;color:#a8c5a0;margin-top:4px">${c.oc} ${fmtD(netAfterMkt/c.rate)} (1 ${c.oc} = ${fmtD(c.rate)} UGX${(c.rate===29||c.rate===1.45)?' · default':''})</div>`:''}
+        </div>
+      `}
+      <div style="margin-top:10px;text-align:right">
+        <span style="font-size:8px;font-weight:700;letter-spacing:.12em;color:#2d6a2d;border:1.5px solid #2d6a2d;padding:3px 8px;border-radius:4px">${isAgent?'AGENT COPY':'TRADER COPY'}</span>
+      </div>
+    </div>`;
+  document.body.appendChild(wrap);
+
+  html2canvas(wrap, {scale:3, backgroundColor:'#ffffff', useCORS:true, logging:false})
+  .then(canvas => {
+    document.body.removeChild(wrap);
+    const caption = isAgent
+      ? `*AGENT REPORT — ${commodity} (${country})*\nTotal Revenue: UGX ${fmt(rev)}\nMarket Costs: – UGX ${fmt(m.total)}\nCash Remitted: UGX ${fmt(cashToRemit)}${credit>0?'\nOutstanding Credit: UGX '+fmt(credit):''}\nDate: ${todayDisp()}\n_Sent via Katale Flow_`
+      : `*TRADER REPORT — ${commodity} (${country})*\nTotal Revenue: UGX ${fmt(rev)}\nMarket Costs: – UGX ${fmt(m.total)}\nNet to Trader: UGX ${fmt(netAfterMkt)}\nDate: ${todayDisp()}\n_Sent via Katale Flow_`;
+
+    canvas.toBlob(blob => {
+      const file = new File([blob], `KataleFlow-${isAgent?'Agent':'Trader'}-Report.png`, {type:'image/png'});
+      if (navigator.canShare && navigator.canShare({files:[file]})) {
+        navigator.share({files:[file], text:caption})
+        .catch(() => fallbackReportWA(canvas, caption, isAgent));
+      } else {
+        fallbackReportWA(canvas, caption, isAgent);
+      }
+      if (btn) { btn.textContent = '💬 WhatsApp'; btn.disabled = false; }
+    }, 'image/png');
+  })
+  .catch(() => {
+    if (document.body.contains(wrap)) document.body.removeChild(wrap);
+    alert('Could not save image. Try PDF instead.');
+    if (btn) { btn.textContent = '💬 WhatsApp'; btn.disabled = false; }
+  });
+}
+
+function fallbackReportWA(canvas, caption, isAgent) {
+  const link = document.createElement('a');
+  link.download = `KataleFlow-${isAgent?'Agent':'Trader'}-Report.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+  setTimeout(() => window.open('https://wa.me/?text='+encodeURIComponent(caption),'_blank'), 800);
 }
 
 // ── Tab switching ──
@@ -2504,7 +2945,8 @@ function confirmAgentRole() {
 
   // Default rates — used in trader report conversion note
   const defaultRates = { Kenya: 29, Tanzania: 1.45, Other: 29 };
-  const rate = defaultRates[country] || 29;
+  const enteredRate = parseFloat(val('agent-rate')) || 0;
+  const rate = enteredRate > 0 ? enteredRate : (defaultRates[country] || 29);
   const oc   = country === 'Tanzania' ? 'TZS' : 'KES';
 
   const setF = (id,v) => { const e=$(id); if(e) e.value=v; };
