@@ -237,7 +237,7 @@ input:focus,select:focus{outline:none;border-color:#1a3a1a;background:#fff}
 <body>
 
 <!-- ══════════ ROLE SELECTOR OVERLAY ══════════ -->
-<div id="role-overlay" style="display:none;position:fixed;inset:0;background:#0d1f0d;z-index:999;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem;overflow-y:auto">
+<div id="role-overlay" style="display:none;position:fixed;inset:0;background:#0d1f0d;z-index:999;flex-direction:column;align-items:center;justify-content:flex-start;padding:2rem 1.5rem 1.5rem;overflow-y:auto">
   <div style="text-align:center;margin-bottom:1.5rem">
     <div style="width:56px;height:56px;background:#c9a84c;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.3rem;font-weight:700;color:#1a3a1a;margin:0 auto .75rem">UG</div>
     <h1 style="color:#f5ede0;font-size:1.25rem;font-weight:700;margin-bottom:.3rem">Katale Flow</h1>
@@ -290,6 +290,21 @@ input:focus,select:focus{outline:none;border-color:#1a3a1a;background:#fff}
       <button onclick="confirmAgentRole()" style="width:100%;margin-top:.85rem;background:#c9a84c;color:#1a3a1a;border:none;border-radius:9px;padding:.7rem;font-weight:700;font-size:.9rem;cursor:pointer;font-family:inherit"><span data-i18n="role_agent_start">Start Recording Sales →</span></button>
     </div>
 
+    <!-- Preset loaded confirmation -->
+    <div id="preset-loaded-note" style="display:none;text-align:center;padding:.5rem;background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.4);border-radius:8px;font-size:.75rem;color:#c9a84c;font-weight:600">
+      ✓ Sample data loaded — now choose your role above
+    </div>
+
+    <!-- Test Data Presets -->
+    <div style="border-top:1px solid rgba(255,255,255,.1);padding-top:.85rem;margin-top:.25rem">
+      <div style="font-size:.65rem;font-weight:600;color:#a8c5a0;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.55rem;text-align:center">⚡ Load Sample Data</div>
+      <div style="display:flex;gap:.5rem">
+        <button onclick="fillTestData('kenya')" style="flex:1;background:rgba(201,168,76,.15);border:1.5px solid rgba(201,168,76,.4);color:#c9a84c;border-radius:9px;padding:.6rem;font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit">🇰🇪 Kenya Trip</button>
+        <button onclick="fillTestData('tanzania')" style="flex:1;background:rgba(168,197,160,.15);border:1.5px solid rgba(168,197,160,.4);color:#a8c5a0;border-radius:9px;padding:.6rem;font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit">🇹🇿 Tanzania Trip</button>
+      </div>
+      <div style="font-size:.65rem;color:rgba(168,197,160,.5);text-align:center;margin-top:.4rem">Fills all fields with sample data for testing</div>
+    </div>
+
   </div>
 </div>
 
@@ -302,7 +317,6 @@ input:focus,select:focus{outline:none;border-color:#1a3a1a;background:#fff}
     <button id="role-switch-btn" onclick="showRoleSelector()" class="hist-btn" style="font-size:.72rem;padding:.38rem .75rem"></button>
     <button class="hist-btn" id="hist-open-btn">History <span class="hist-badge" id="hist-badge" style="display:none">0</span></button>
     <button class="hist-btn" id="lang-btn" onclick="cycleLang()" style="font-size:.82rem;min-width:42px">🌐 EN</button>
-    <button class="hist-btn" onclick="fillTestData()" style="background:rgba(201,168,76,.2);border-color:rgba(201,168,76,.5);color:#c9a84c">⚡</button>
   </div>
 </div>
 
@@ -423,16 +437,19 @@ input:focus,select:focus{outline:none;border-color:#1a3a1a;background:#fff}
         </div>
         <div id="th-location-hint" class="tag" style="margin-top:4px">Counted in Expenses — deducted before profit</div>
       </div>
-      <!-- Other -->
-      <div class="field" style="margin-bottom:.85rem">
-        <label>Other Costs (optional)</label>
-        <div class="cfw">
-          <select id="f-ocCur"><option value="UGX">UGX</option><option value="KES">KES</option></select>
-          <input id="f-oc" type="text" inputmode="numeric" placeholder="0"/>
+      <!-- Other Costs — multiple entries -->
+      <div id="oc-entries-wrap">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem">
+          <label style="margin:0">Other Costs (optional)</label>
+          <button type="button" onclick="addOtherCost()" style="background:none;border:1.5px solid #2d6a2d;color:#2d6a2d;border-radius:6px;padding:2px 10px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:inherit">+ Add</button>
         </div>
-        <div class="conv" id="conv-oc" style="display:none"></div>
-        <span class="tag">Loading, offloading, market fees, etc.</span>
+        <div id="oc-entries"></div>
       </div>
+      <!-- Hidden legacy field kept for calc() compatibility -->
+      <input type="hidden" id="f-oc" value="0"/>
+      <input type="hidden" id="f-ocCur" value="UGX"/>
+      <div class="conv" id="conv-oc" style="display:none"></div>
+      <div id="oc-total-tag" style="display:none;font-size:.72rem;color:#2d6a2d;font-weight:600;margin-top:.25rem"></div>
     </div>
     <!-- Total box always present -->
     <div class="total-box" id="exp-total-box" style="display:none">
@@ -462,6 +479,64 @@ input:focus,select:focus{outline:none;border-color:#1a3a1a;background:#fff}
       <button class="btn btn-lt" id="btn-new-trip" onclick="doNew()" style="color:#2d6a2d;border-color:#2d6a2d">+ New Trip</button>
     </div>
     <div id="receipt-html"></div>
+
+    <!-- Profit Estimator -->
+    <div id="profit-estimator" style="display:none;margin-top:1rem;background:#f5f9f0;border:1.5px solid #b8d4b8;border-radius:12px;padding:1rem 1.1rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem">
+        <h3 style="font-size:.9rem;font-weight:700;color:#1a3a1a;margin:0">📈 Profit Estimator</h3>
+        <label style="display:flex;align-items:center;gap:.4rem;font-size:.75rem;color:#2d6a2d;cursor:pointer;font-weight:600">
+          <input type="checkbox" id="est-include" style="accent-color:#2d6a2d;width:15px;height:15px"/> Include in receipt
+        </label>
+      </div>
+      <div style="font-size:.76rem;color:#7a6e5f;margin-bottom:.75rem">Based on your all-in cost per bag — enter your expected selling price to see estimated profit.</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.85rem">
+        <div>
+          <label style="font-size:.68rem;font-weight:600;color:#7a6e5f;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">Cost per Bag (UGX)</label>
+          <div style="padding:.5rem .75rem;background:#fff;border:1.5px solid #d4c9b8;border-radius:7px;font-family:monospace;font-size:.9rem;color:#1a2e1a;font-weight:600" id="est-cpb-display">—</div>
+        </div>
+        <div>
+          <label style="font-size:.68rem;font-weight:600;color:#7a6e5f;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">Expected Sell Price (UGX)</label>
+          <input type="text" inputmode="numeric" id="est-sell-price" placeholder="e.g. 350,000"
+            style="width:100%;padding:.5rem .75rem;border:1.5px solid #2d6a2d;border-radius:7px;font-size:.9rem;font-family:inherit;color:#1a2e1a;background:#fff"
+            oninput="fmtInput(this);calcEstimate()"/>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div id="est-results" style="display:none;background:#1a3a1a;border-radius:9px;padding:.85rem 1rem;color:#f5ede0">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.65rem">
+          <div>
+            <div style="font-size:.65rem;text-transform:uppercase;letter-spacing:.06em;color:#a8c5a0;font-weight:600">Est. Revenue</div>
+            <div style="font-family:monospace;font-size:1rem;font-weight:600;color:#9fe1cb;margin-top:3px" id="est-revenue">—</div>
+          </div>
+          <div>
+            <div style="font-size:.65rem;text-transform:uppercase;letter-spacing:.06em;color:#a8c5a0;font-weight:600">Total Cost</div>
+            <div style="font-family:monospace;font-size:1rem;font-weight:600;color:#f09595;margin-top:3px" id="est-total-cost">—</div>
+          </div>
+          <div>
+            <div style="font-size:.65rem;text-transform:uppercase;letter-spacing:.06em;color:#a8c5a0;font-weight:600">Est. Profit</div>
+            <div style="font-family:monospace;font-size:1.2rem;font-weight:700;color:#c9a84c;margin-top:3px" id="est-profit">—</div>
+          </div>
+          <div>
+            <div style="font-size:.65rem;text-transform:uppercase;letter-spacing:.06em;color:#a8c5a0;font-weight:600">ROI</div>
+            <div style="font-family:monospace;font-size:1.2rem;font-weight:700;margin-top:3px" id="est-roi">—</div>
+          </div>
+        </div>
+        <div style="border-top:1px solid rgba(255,255,255,.15);padding-top:.6rem;display:flex;justify-content:space-between;font-size:.75rem">
+          <span style="color:#a8c5a0">Profit per bag</span>
+          <span style="font-family:monospace;font-weight:600;color:#c9a84c" id="est-ppb">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.75rem;margin-top:.3rem">
+          <span style="color:#a8c5a0">Break-even price</span>
+          <span style="font-family:monospace;font-weight:600;color:#f5ede0" id="est-breakeven">—</span>
+        </div>
+      </div>
+
+      <div id="est-warning" style="display:none;margin-top:.65rem;padding:.6rem .85rem;background:#3a1a0a;border:1px solid #f09595;border-radius:7px;font-size:.76rem;color:#f09595;font-weight:600">
+        ⚠ Selling below cost — you will make a loss at this price.
+      </div>
+    </div>
   </div>
 </div>
 
@@ -668,6 +743,9 @@ input:focus,select:focus{outline:none;border-color:#1a3a1a;background:#fff}
 
 <!-- ══════════ PROFIT TAB ══════════ -->
 <div id="tab-profit" class="container" style="display:none">
+  <div style="display:flex;justify-content:flex-end;margin-bottom:.65rem">
+    <button class="btn btn-gd" onclick="shareProfit()" style="font-size:.82rem">💬 Share via WhatsApp</button>
+  </div>
   <div id="profit-content"><div class="no-data"><div style="font-size:1.8rem;margin-bottom:.65rem">📊</div><p style="font-size:.85rem;color:#7a6e5f">Fill in Expenses and log sales to see profit.</p></div></div>
 </div>
 
@@ -738,6 +816,149 @@ let salesDays = [{priceOverride:null,marketBags:0,discount:[],open:false},{price
 let creditEntries = []; // [{buyer:'', bags:0, pricePerBag:0}]
 let expSaved = false;
 let thLocation = 'expenses'; // 'expenses' or 'market'
+let otherCosts = []; // [{label:'', perBag:0, total:0, usePerBag:true}]
+
+function addOtherCost() {
+  otherCosts.push({label:'', perBag:0, total:0, usePerBag:true, cur:'UGX'});
+  renderOtherCosts();
+}
+
+function removeOtherCost(i) {
+  otherCosts.splice(i,1);
+  renderOtherCosts();
+  updateStep2Display();
+}
+
+function renderOtherCosts() {
+  const el = $('oc-entries');
+  if (!el) return;
+  if (!otherCosts.length) {
+    el.innerHTML = `<div style="font-size:.74rem;color:#b8b0a4;padding:.3rem 0">No other costs added yet. Tap + Add to include loading fees, tolls, etc.</div>`;
+    updateOcHidden();
+    return;
+  }
+  el.innerHTML = otherCosts.map((e,i) => {
+    const cur = e.cur || 'UGX';
+    const originCur = val('f-country') === 'Tanzania' ? 'TZS' : 'KES';
+    return `
+    <div style="background:#f5f9f0;border:1.5px solid #d4c9b8;border-radius:9px;padding:.65rem .8rem;margin-bottom:.5rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.45rem">
+        <input type="text" value="${e.label||''}" placeholder="Description (e.g. Loading fee)"
+          id="oc-label-${i}"
+          style="flex:1;border:none;background:transparent;font-size:.82rem;font-family:inherit;color:#1a2e1a;font-weight:600;outline:none"/>
+        <select id="oc-cur-${i}" style="margin-left:6px;border:1.5px solid #d4c9b8;border-radius:6px;padding:3px 6px;font-size:.78rem;font-family:inherit;color:#1a2e1a;background:#fff;cursor:pointer">
+          <option value="UGX"${cur==='UGX'?' selected':''}>UGX</option>
+          <option value="${originCur}"${cur===originCur?' selected':''}>${originCur}</option>
+        </select>
+        <button onclick="removeOtherCost(${i})" style="background:none;border:none;color:#b8b0a4;cursor:pointer;font-size:.85rem;padding:0 0 0 6px">✕</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem">
+        <div>
+          <div style="font-size:.65rem;font-weight:600;color:#7a6e5f;text-transform:uppercase;margin-bottom:3px">Per Bag (${cur})</div>
+          <input type="text" inputmode="numeric" value="${e.perBag>0?fmt(e.perBag):''}" placeholder="0"
+            id="oc-pb-${i}"
+            style="width:100%;padding:.42rem .6rem;border:1.5px solid ${e.usePerBag?'#2d6a2d':'#d4c9b8'};border-radius:6px;font-size:.85rem;font-family:monospace;color:#1a2e1a;background:#fff;box-sizing:border-box"/>
+        </div>
+        <div>
+          <div style="font-size:.65rem;font-weight:600;color:#7a6e5f;text-transform:uppercase;margin-bottom:3px">Total (${cur})</div>
+          <input type="text" inputmode="numeric" value="${e.total>0?fmt(e.total):''}" placeholder="0"
+            id="oc-tot-${i}"
+            style="width:100%;padding:.42rem .6rem;border:1.5px solid ${!e.usePerBag?'#2d6a2d':'#d4c9b8'};border-radius:6px;font-size:.85rem;font-family:monospace;color:#1a2e1a;background:#fff;box-sizing:border-box"/>
+        </div>
+      </div>
+      ${cur !== 'UGX' && (e.total > 0 || e.perBag > 0) ? `<div style="font-size:.7rem;color:#2d6a2d;margin-top:4px;font-weight:600" id="oc-conv-${i}"></div>` : ''}
+    </div>`}).join('');
+
+  // Attach listeners
+  otherCosts.forEach((e,i) => {
+    const labelEl = $('oc-label-'+i);
+    const pbEl    = $('oc-pb-'+i);
+    const totEl   = $('oc-tot-'+i);
+    const curEl   = $('oc-cur-'+i);
+    const convEl  = $('oc-conv-'+i);
+
+    const getRate = () => num('f-rate') || 1;
+    const toUGX   = v => (otherCosts[i].cur === 'UGX') ? v : v * getRate();
+    const numBags = () => calc().numBags || 0;
+
+    const updateConv = () => {
+      if (!convEl) return;
+      const cur = otherCosts[i].cur;
+      if (cur === 'UGX') { convEl.textContent = ''; return; }
+      const rate = parseFloat(($('f-rate')?.value||'').replace(/,/g,'')) || 1;
+      const nb = parseFloat(($('f-numBags')?.value||'').replace(/,/g,'')) || 0;
+      const perBag = otherCosts[i].perBag || 0;
+      const total = otherCosts[i].total || 0;
+      if (rate > 0 && (perBag > 0 || total > 0)) {
+        const pbUGX = Math.round(perBag * rate);
+        const totUGX = Math.round(total * rate);
+        convEl.textContent = `= UGX ${fmt(pbUGX)}/bag · UGX ${fmt(totUGX)} total (rate: 1 ${cur} = ${fmtD(rate)} UGX)`;
+      } else {
+        convEl.textContent = '';
+      }
+    };
+
+    if (curEl) curEl.addEventListener('change', function(){
+      otherCosts[i].cur = this.value;
+      renderOtherCosts(); // re-render to update labels
+      updateOcHidden(); updateStep2Display();
+    });
+
+    if (labelEl) labelEl.addEventListener('input', function(){
+      otherCosts[i].label = this.value;
+    });
+
+    if (pbEl) pbEl.addEventListener('input', function(){
+      fmtInput(this);
+      const v = parseFloat(this.value.replace(/,/g,'')) || 0;
+      otherCosts[i].perBag = v;
+      otherCosts[i].usePerBag = true;
+      const nb = numBags();
+      if (v > 0 && nb > 0) {
+        const tot = v * nb;
+        otherCosts[i].total = tot;
+        if (totEl) { totEl.value = fmt(tot); totEl.style.borderColor = '#d4c9b8'; }
+        pbEl.style.borderColor = '#2d6a2d';
+      }
+      updateConv(); updateOcHidden(); updateStep2Display();
+    });
+
+    if (totEl) totEl.addEventListener('input', function(){
+      fmtInput(this);
+      const v = parseFloat(this.value.replace(/,/g,'')) || 0;
+      otherCosts[i].total = v;
+      otherCosts[i].usePerBag = false;
+      const nb = numBags();
+      if (v > 0 && nb > 0) {
+        const pb = v / nb;
+        otherCosts[i].perBag = pb;
+        if (pbEl) { pbEl.value = fmt(Math.round(pb)); pbEl.style.borderColor = '#d4c9b8'; }
+        totEl.style.borderColor = '#2d6a2d';
+      }
+      updateConv(); updateOcHidden(); updateStep2Display();
+    });
+
+    updateConv();
+  });
+  updateOcHidden();
+}
+
+function updateOcHidden() {
+  const rate = parseFloat(($('f-rate')?.value||'').replace(/,/g,'')) || 1;
+  const numBags = parseFloat(($('f-numBags')?.value||'').replace(/,/g,'')) || 0;
+  const totalUGX = otherCosts.reduce((sum, e) => {
+    const raw = e.usePerBag ? e.perBag * numBags : e.total;
+    const ugx = (e.cur === 'UGX') ? raw : raw * rate;
+    return sum + (ugx || 0);
+  }, 0);
+  const hid = $('f-oc');
+  if (hid) hid.value = Math.round(totalUGX);
+  const tag = $('oc-total-tag');
+  if (tag) {
+    if (totalUGX > 0) { tag.style.display=''; tag.textContent=`Total other costs: UGX ${fmt(Math.round(totalUGX))}`; }
+    else tag.style.display='none';
+  }
+}
 let expStep = 1;
 
 // ── Core calc from DOM ──
@@ -755,10 +976,11 @@ function calc() {
 
   const btRaw = num('f-bt'); const btCur = val('f-btCur');
   const thRaw = num('f-th'); const thCur = val('f-thCur');
-  const ocRaw = num('f-oc'); const ocCur = val('f-ocCur');
+  const ocRaw = num('f-oc'); // f-oc now stores TOTAL UGX (set by updateOcHidden)
+  const ocCur = 'UGX'; // always UGX since updateOcHidden converts
   const btUGX = btCur === 'UGX' ? btRaw : btRaw * rate;
   const thUGX = thCur === 'UGX' ? thRaw : thRaw * rate;
-  const ocUGX = ocCur === 'UGX' ? ocRaw : ocRaw * rate;
+  const ocUGX = ocRaw; // already total UGX — no multiplication needed
 
   // Truck hire only goes into expenses if location is 'expenses'
   const thInExp = thLocation === 'expenses' ? thUGX : 0;
@@ -795,6 +1017,8 @@ function setThLocation(loc) {
 // ── Step 1 live update ──
 function updateStep1Display() {
   const c = calc();
+  // Recalc per-bag other costs now we know numBags
+  updateOcHidden();
 
   // Weight info
   if (c.totalKg > 0) {
@@ -862,67 +1086,80 @@ function updateStep2Display() {
 }
 
 // ── Test Data ──
-function fillTestData() {
+function fillTestData(country) {
   const setF = (id, v) => { const e=$(id); if(e) e.value=v; };
+  otherCosts = [];
 
-  // Expenses — Tanzania onions
-  setF('f-country', 'Tanzania');
-  document.querySelectorAll('.oc-label').forEach(el => el.textContent = 'TZS');
-  setF('f-commodity', 'Onions');
-  setF('f-numBags', '160');
-  setF('f-kgPerBag', '');
-  setF('f-ppbDirect', '');
-  setF('f-ppkKg', '');
-  setF('f-rate', '1.45');
-  setF('f-yourName', '');
-  setF('f-bossName', '');
-  setF('f-vehicleNo', '');
-  setF('f-bt', '0'); setF('f-btCur', 'UGX');
-  setF('f-th', '0'); setF('f-thCur', 'TZS');
-  setF('f-oc', '0'); setF('f-ocCur', 'UGX');
+  if (country === 'kenya') {
+    setF('f-country','Kenya');
+    document.querySelectorAll('.oc-label').forEach(el=>el.textContent='KES');
+    setF('f-commodity','Onions'); setF('f-numBags','215');
+    setF('f-kgPerBag','60'); setF('f-ppbDirect',''); setF('f-ppkKg','55');
+    setF('f-rate','29.4'); setF('f-yourName','Dan');
+    setF('f-bossName','Asinia Rose'); setF('f-vehicleNo','KAB 771C');
+    setF('f-bt','450,000'); setF('f-btCur','UGX');
+    setF('f-th','100,000'); setF('f-thCur','KES');
+    setF('f-oc','0'); setF('f-ocCur','KES');
+    otherCosts = [{label:'Other costs', perBag:80, total:80*215, usePerBag:true, cur:'KES'}];
+    setF('s-date','2026-03-15'); setF('s-startPrice','130000'); setF('s-priceDrop','0');
+    setF('s-prepared-by','Dan'); setF('s-vehicle-plate','KAB 771C');
+    salesDays = [
+      {priceOverride:130000, marketBags:95, discount:[],open:false},
+      {priceOverride:130000, marketBags:53, discount:[],open:false},
+      {priceOverride:130000, marketBags:52, discount:[],open:false},
+      {priceOverride:130000, marketBags:15, discount:[],open:false},
+    ];
+    setF('mc-driver','90,000'); setF('mc-parking','100,000');
+    setF('mc-security','50,000'); setF('mc-labour','0');
+    setF('mc-cess','150,000'); setF('mc-storage','0');
+    setF('mc-other','0'); setF('mc-other-label','');
+    creditEntries = [];
+    setF('cash-remitted','27,560,000');
+    setF('agent-country','Kenya'); setF('agent-commodity','Onions');
+    setF('agent-bags','215'); setF('agent-rate','29.4');
 
-  // Sales setup
-  setF('s-date', '2026-03-19');
-  setF('s-startPrice', '430000');
-  setF('s-priceDrop', '10000');
-  setF('s-prepared-by', 'Dan');
-  setF('s-vehicle-plate', 'T 912Y');
+  } else {
+    setF('f-country','Tanzania');
+    document.querySelectorAll('.oc-label').forEach(el=>el.textContent='TZS');
+    setF('f-commodity','Onions'); setF('f-numBags','160');
+    setF('f-kgPerBag',''); setF('f-ppbDirect',''); setF('f-ppkKg','');
+    setF('f-rate','1.45'); setF('f-yourName','Dan');
+    setF('f-bossName',''); setF('f-vehicleNo','T 912Y');
+    setF('f-bt','0'); setF('f-btCur','UGX');
+    setF('f-th','0'); setF('f-thCur','TZS');
+    setF('f-oc','0'); setF('f-ocCur','UGX');
+    setF('s-date','2026-03-19'); setF('s-startPrice','430000'); setF('s-priceDrop','10000');
+    setF('s-prepared-by','Dan'); setF('s-vehicle-plate','T 912Y');
+    salesDays = [
+      {priceOverride:430000,marketBags:6,  discount:[],open:false},
+      {priceOverride:400000,marketBags:6,  discount:[],open:false},
+      {priceOverride:270000,marketBags:114,discount:[],open:false},
+      {priceOverride:260000,marketBags:15, discount:[],open:false},
+      {priceOverride:250000,marketBags:11, discount:[],open:false},
+    ];
+    setF('mc-driver','700,000'); setF('mc-parking','100,000');
+    setF('mc-security','50,000'); setF('mc-labour','200,000');
+    setF('mc-cess','150,000'); setF('mc-storage','0');
+    setF('mc-other','0'); setF('mc-other-label','');
+    creditEntries = [];
+    setF('cash-remitted','26,030,000');
+    setF('agent-country','Tanzania'); setF('agent-commodity','Onions');
+    setF('agent-bags','160'); setF('agent-rate','');
+  }
 
-  // Sales days from PDF
-  salesDays = [
-    {priceOverride:430000, marketBags:6,   discount:[], open:false},
-    {priceOverride:400000, marketBags:6,   discount:[], open:false},
-    {priceOverride:270000, marketBags:114, discount:[], open:false},
-    {priceOverride:260000, marketBags:15,  discount:[], open:false},
-    {priceOverride:250000, marketBags:11,  discount:[], open:false},
-  ];
-
-  // Market costs from PDF
-  setF('mc-driver',  '700,000');
-  setF('mc-parking', '100,000');
-  setF('mc-security','50,000');
-  setF('mc-labour',  '200,000');
-  setF('mc-cess',    '150,000');
-  setF('mc-storage', '0');
-  setF('mc-other',   '0');
-  setF('mc-other-label', '');
-
-  // Cash reconciliation from PDF
-  setF('cash-remitted', '26,030,000');
-
-  // Credit entries — none in sample
-  creditEntries = [];
-
-  // Refresh everything
-  updateStep1Display();
-  updateStep2Display();
-  renderSales();
-  updateMktDisplay();
-  updateBadges();
-  switchTab('sales');
+  renderOtherCosts(); renderCreditEntries();
+  updateStep1Display(); updateStep2Display();
+  renderSales(); updateMktDisplay(); updateBadges();
+  const note = $('preset-loaded-note');
+  if (note) note.style.display = '';
+  if (currentRole) {
+    hideRoleSelector();
+    switchTab(currentRole === 'agent' ? 'sales' : 'expenses');
+    if (currentRole === 'trader') goStep(1);
+  }
 }
 
-// ── Attach listeners once on page load ──
+
 function attachListeners() {
   // Step 1 inputs — all update purchase price live
   ['f-numBags','f-kgPerBag','f-ppbDirect','f-ppkKg','f-rate'].forEach(id => {
@@ -972,12 +1209,23 @@ function attachListeners() {
   $('hist-overlay').addEventListener('click', toggleHistory);
 
   // Sales
-  // Sales setup fields — trigger report rebuild
+  // Sales setup fields — trigger report rebuild + save name/plate to localStorage
   $('s-date').value = todayStr();
   ['s-date','s-prepared-by','s-vehicle-plate'].forEach(id => {
     const el = $(id);
-    if (el) el.addEventListener('input', buildMarketReport);
-    if (el && id === 's-date') el.addEventListener('change', () => { renderSales(); buildMarketReport(); });
+    if (!el) return;
+    // Restore saved value
+    if (id === 's-prepared-by' || id === 's-vehicle-plate') {
+      const saved = localStorage.getItem('kf-'+id);
+      if (saved) el.value = saved;
+    }
+    el.addEventListener('input', function() {
+      buildMarketReport();
+      if (id === 's-prepared-by' || id === 's-vehicle-plate') {
+        localStorage.setItem('kf-'+id, this.value);
+      }
+    });
+    if (id === 's-date') el.addEventListener('change', () => { renderSales(); buildMarketReport(); });
   });
   $('s-startPrice').addEventListener('input', renderSales);
   $('s-priceDrop').addEventListener('input', renderSales);
@@ -1042,7 +1290,7 @@ function buildReceipt() {
         <tr><td>Purchase (${fmt(c.numBags)} bags × ${oc} ${fmtD(c.ppBag)}/bag)</td><td class="mn rt">${fmt(c.buyUGX)}</td><td style="text-align:right;font-size:.67rem;color:#7a6e5f">Forex</td></tr>
         <tr><td>Border Tax${c.btCur!=='UGX'?` (${c.btCur} ${fmtD(c.btRaw)})`:''}  </td><td class="mn rt">${fmt(c.btUGX)}</td><td style="text-align:right;font-size:.67rem;color:#7a6e5f">Border</td></tr>
         <tr><td>Truck Hire${c.thCur!=='UGX'?` (${c.thCur} ${fmtD(c.thRaw)})`:''}  </td><td class="mn rt">${fmt(c.thUGX)}</td><td style="text-align:right;font-size:.67rem;color:#7a6e5f">Full trip</td></tr>
-        ${c.ocRaw>0?`<tr><td>Other Costs</td><td class="mn rt">${fmt(c.ocUGX)}</td><td style="text-align:right;font-size:.67rem;color:#7a6e5f">Misc.</td></tr>`:''}
+        ${c.ocRaw>0?`<tr><td>Other Costs (UGX ${fmt(c.ocRaw)}/bag × ${fmt(c.numBags)} bags)</td><td class="mn rt">${fmt(c.ocUGX)}</td><td style="text-align:right;font-size:.67rem;color:#7a6e5f">Misc.</td></tr>`:''}
         ${c.numBags>0?`<tr style="background:#f5f9f0"><td style="color:#2d6a2d;font-weight:600">All-in cost per bag</td><td class="mn rt" style="color:#2d6a2d;font-weight:600">${fmt(c.cpb)}</td><td style="text-align:right;font-size:.67rem;color:#7a6e5f">per bag</td></tr>`:''}
       </tbody>
     </table></div>
@@ -1051,6 +1299,88 @@ function buildReceipt() {
   </div>`;
   expSaved = false;
   $('btn-save').style.display = '';
+
+  // Show profit estimator
+  const estEl = $('profit-estimator');
+  if (estEl) estEl.style.display = '';
+  setText('est-cpb-display', c.numBags > 0 ? fmt(Math.round(c.cpb)) : '—');
+  calcEstimate();
+}
+
+function calcEstimate() {
+  const c = calc();
+  const sellPrice = parseFloat(($('est-sell-price')?.value||'').replace(/,/g,'')) || 0;
+  const results = $('est-results');
+  const warning = $('est-warning');
+  if (!results) return;
+
+  if (!sellPrice || !c.numBags || !c.cpb) { results.style.display='none'; if(warning) warning.style.display='none'; return; }
+
+  const estRevenue   = sellPrice * c.numBags;
+  const totalCost    = c.totalExp;
+  const estProfit    = estRevenue - totalCost;
+  const roi          = totalCost > 0 ? (estProfit / totalCost * 100) : 0;
+  const profitPerBag = c.numBags > 0 ? estProfit / c.numBags : 0;
+  const isLoss       = estProfit < 0;
+
+  results.style.display = '';
+  if (warning) warning.style.display = isLoss ? '' : 'none';
+
+  setText('est-revenue',    'UGX ' + fmt(estRevenue));
+  setText('est-total-cost', 'UGX ' + fmt(totalCost));
+  const profEl = $('est-profit');
+  if (profEl) { profEl.textContent = (isLoss?'– ':'') + 'UGX ' + fmt(Math.abs(estProfit)); profEl.style.color = isLoss ? '#f09595' : '#c9a84c'; }
+  const roiEl = $('est-roi');
+  if (roiEl) { roiEl.textContent = roi.toFixed(1) + '%'; roiEl.style.color = isLoss ? '#f09595' : '#4caf82'; }
+  setText('est-ppb',       (isLoss?'– ':'') + 'UGX ' + fmt(Math.abs(Math.round(profitPerBag))));
+  setText('est-breakeven', 'UGX ' + fmt(Math.round(c.cpb)));
+}
+
+function getEstimateSectionPortrait() {
+  if (!$('est-include')?.checked) return '';
+  const c = calc();
+  const sellPrice = parseFloat(($('est-sell-price')?.value||'').replace(/,/g,'')) || 0;
+  if (!sellPrice || !c.numBags) return '';
+  const estRevenue = sellPrice * c.numBags;
+  const estProfit  = estRevenue - c.totalExp;
+  const roi        = c.totalExp > 0 ? (estProfit / c.totalExp * 100) : 0;
+  const isLoss     = estProfit < 0;
+  return `<div style="padding:12px 20px;background:#f5f9f0;border-top:2px dashed #b8d4b8">
+    <div style="font-size:9px;font-weight:700;color:#1a3a1a;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">📈 Profit Estimate</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;font-size:10px">
+      <div><div style="color:#7a6e5f;font-size:8px;font-weight:600;text-transform:uppercase">Sell Price/Bag</div><div style="font-family:monospace;font-weight:700;color:#1a2e1a">UGX ${fmt(sellPrice)}</div></div>
+      <div><div style="color:#7a6e5f;font-size:8px;font-weight:600;text-transform:uppercase">Cost/Bag</div><div style="font-family:monospace;font-weight:700;color:#1a2e1a">UGX ${fmt(Math.round(c.cpb))}</div></div>
+      <div><div style="color:#7a6e5f;font-size:8px;font-weight:600;text-transform:uppercase">Est. Revenue</div><div style="font-family:monospace;font-weight:700;color:#1a7a1a">UGX ${fmt(estRevenue)}</div></div>
+      <div><div style="color:#7a6e5f;font-size:8px;font-weight:600;text-transform:uppercase">Est. Profit</div><div style="font-family:monospace;font-weight:700;color:${isLoss?'#b82020':'#1a7a1a'}">${isLoss?'– ':''}UGX ${fmt(Math.abs(estProfit))}</div></div>
+    </div>
+    <div style="margin-top:8px;padding-top:6px;border-top:1px solid #d4c9b8;display:flex;justify-content:space-between;font-size:10px">
+      <span style="color:#7a6e5f">ROI</span>
+      <span style="font-family:monospace;font-weight:700;color:${isLoss?'#b82020':'#2d6a2d'}">${roi.toFixed(1)}% ${isLoss?'⚠ LOSS':'✓ PROFIT'}</span>
+    </div>
+  </div>`;
+}
+
+function getEstimateSection() {
+  // Returns HTML string for estimate block if user opted to include it
+  if (!$('est-include')?.checked) return '';
+  const c = calc();
+  const sellPrice = parseFloat(($('est-sell-price')?.value||'').replace(/,/g,'')) || 0;
+  if (!sellPrice || !c.numBags) return '';
+  const estRevenue = sellPrice * c.numBags;
+  const estProfit  = estRevenue - c.totalExp;
+  const roi        = c.totalExp > 0 ? (estProfit / c.totalExp * 100) : 0;
+  const isLoss     = estProfit < 0;
+  return `
+    <div style="border-top:2px solid #1a3a1a;margin:0 1.5rem;padding:1rem 0">
+      <div style="font-size:.72rem;font-weight:700;color:#1a3a1a;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.65rem">📈 Profit Estimate</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;font-size:.82rem">
+        <div><span style="color:#7a6e5f">Sell Price/Bag</span><br/><strong>UGX ${fmt(sellPrice)}</strong></div>
+        <div><span style="color:#7a6e5f">Cost/Bag</span><br/><strong>UGX ${fmt(Math.round(c.cpb))}</strong></div>
+        <div><span style="color:#7a6e5f">Est. Revenue</span><br/><strong style="font-family:monospace">UGX ${fmt(estRevenue)}</strong></div>
+        <div><span style="color:#7a6e5f">Est. Profit</span><br/><strong style="font-family:monospace;color:${isLoss?'#b82020':'#1a7a1a'}">${isLoss?'– ':''}UGX ${fmt(Math.abs(estProfit))}</strong></div>
+      </div>
+      <div style="margin-top:.5rem;font-size:.8rem;color:${isLoss?'#b82020':'#2d6a2d'};font-weight:600">ROI: ${roi.toFixed(1)}% ${isLoss?'⚠ LOSS':'✓'}</div>
+    </div>`;
 }
 
 function doSaveTrip() {
@@ -1098,11 +1428,12 @@ function doSaveTrip() {
       days: JSON.parse(JSON.stringify(salesDays)),
     },
     creditData: JSON.parse(JSON.stringify(creditEntries)),
+    otherCostsData: JSON.parse(JSON.stringify(otherCosts)),
     cashCollected: val('cash-collected'),
     cashRemitted: val('cash-remitted')
   };
   trips.push(t); saveTrips(); expSaved=true;
-  $('btn-save').textContent = '✓ Saved';
+  $('btn-save').textContent = 'Saved ✓';
   $('btn-save').disabled = true;
   renderHistBadge();
 }
@@ -1132,6 +1463,8 @@ function doNew() {
   thLocation = 'expenses';
   setThLocation('expenses');
   creditEntries = [];
+  otherCosts = [];
+  renderOtherCosts();
   const cashEl = $('cash-collected'); if(cashEl) cashEl.value = '';
   const cashREl = $('cash-remitted'); if(cashREl) cashREl.value = '';
   expSaved = false;
@@ -1182,9 +1515,12 @@ function duplicateTrip(id) {
     {priceOverride:null,marketBags:0,discount:[],open:false},
     {priceOverride:null,marketBags:0,discount:[],open:false},
   ];
+  otherCosts = Array.isArray(t.otherCostsData) ? JSON.parse(JSON.stringify(t.otherCostsData)) : [];
+  creditEntries = [];
   expSaved = false;
   $('btn-save').textContent = '💾 Save Trip';
   $('btn-save').disabled = false;
+  renderOtherCosts();
   updateStep1Display(); updateStep2Display(); renderSales(); updateMktDisplay();
   goStep(1); switchTab('expenses');
 }
@@ -1244,11 +1580,13 @@ function loadTrip(id) {
     }
   }
 
-  // Restore credit entries
+  // Restore credit entries & other costs
   creditEntries = Array.isArray(t.creditData) ? t.creditData : [];
+  otherCosts = Array.isArray(t.otherCostsData) ? t.otherCostsData : [];
   const cashEl = $('cash-collected'); if(cashEl) cashEl.value = t.cashCollected||'';
   const cashREl = $('cash-remitted'); if(cashREl) cashREl.value = t.cashRemitted||'';
   renderCreditEntries();
+  renderOtherCosts();
 
   // Refresh everything in correct order
   updateStep1Display();
@@ -1372,40 +1710,13 @@ function reconcile(changed) {
 }
 
 function updateCashSummary() {
-  reconcile('mktcosts');
+  // Recalculate whichever field the user filled last
+  const R = numRaw('cash-remitted');
+  const C = numRaw('cash-collected');
+  if (R > 0) reconcile('remitted');
+  else if (C > 0) reconcile('collected');
 }
 
-function updateCreditProgress() {
-  const entered = creditTotal();
-  // Outstanding credit = total sales - total cash collected
-  const rev = salesRevenue();
-  const cash = numRaw('cash-collected');
-  const totalCredit = cash > 0 ? Math.max(0, rev - cash) : 0;
-  const remaining = Math.max(0, totalCredit - entered);
-  const pct = totalCredit > 0 ? Math.min(100, Math.round(entered / totalCredit * 100)) : 0;
-  const box = $('credit-progress');
-  if (!box) return;
-  // Show only when there are credit entries or a known credit gap
-  show('credit-progress', entered > 0 || totalCredit > 0);
-  setText('cp-entered', 'UGX '+fmt(entered));
-  const bar = $('cp-bar'); if (bar) bar.style.width = pct+'%';
-  if (totalCredit > 0) {
-    setText('cp-total', 'of UGX '+fmt(totalCredit)+' outstanding');
-    if (remaining > 0) {
-      setText('cp-remaining-lbl', 'UGX '+fmt(remaining)+' still to account for');
-      if ($('cp-remaining-lbl')) $('cp-remaining-lbl').style.color = '#b87a00';
-    } else if (entered > totalCredit) {
-      setText('cp-remaining-lbl', '⚠ Exceeds gap by UGX '+fmt(entered - totalCredit));
-      if ($('cp-remaining-lbl')) $('cp-remaining-lbl').style.color = '#b82020';
-    } else {
-      setText('cp-remaining-lbl', '✓ Fully accounted');
-      if ($('cp-remaining-lbl')) $('cp-remaining-lbl').style.color = '#1a7a1a';
-    }
-  } else {
-    setText('cp-total', '');
-    setText('cp-remaining-lbl', entered > 0 ? 'UGX '+fmt(entered)+' entered' : '');
-  }
-}
 function creditTotal() { return creditEntries.reduce((s,e)=>s+(e.amount||0),0); }
 
 function updateRemittance() {
@@ -1769,6 +2080,7 @@ function printReceipt(format) {
           <span style="font-family:monospace;font-weight:700;color:#2d6a2d">UGX ${fmt(c.cpb)}</span>
         </div>`:''}
       </div>
+      ${getEstimateSectionPortrait()}
       <div style="background:#1a3a1a;padding:14px 20px;display:flex;justify-content:space-between;align-items:center">
         <div>
           <div style="font-size:9px;font-weight:600;color:#a8c5a0;text-transform:uppercase;letter-spacing:.06em">Total Business Expenses</div>
@@ -1800,14 +2112,6 @@ function printReceipt(format) {
       if (btn) { btn.textContent = '💬 WhatsApp'; btn.disabled = false; }
     });
     return;
-  }
-
-  function fallbackWA(canvas, caption) {
-    const link = document.createElement('a');
-    link.download = 'KataleFlow-Receipt.png';
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-    setTimeout(() => window.open('https://wa.me/?text='+encodeURIComponent(caption),'_blank'), 800);
   }
 
   if (format === 'word') {
@@ -1948,6 +2252,35 @@ function printReceipt(format) {
     y += 10;
   }
 
+  // Profit Estimate (if opted in)
+  const sellPrice = parseFloat(($('est-sell-price')?.value||'').replace(/,/g,'')) || 0;
+  if ($('est-include')?.checked && sellPrice && c.numBags) {
+    const estRevenue = sellPrice * c.numBags;
+    const estProfit  = estRevenue - c.totalExp;
+    const roi        = c.totalExp > 0 ? (estProfit / c.totalExp * 100) : 0;
+    const isLoss     = estProfit < 0;
+    y += 4;
+    doc.setDrawColor(184,212,184); doc.setLineDashPattern([2,2],0); doc.line(M, y, M+CW, y); doc.setLineDashPattern([],0);
+    y += 6;
+    doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(26,58,26);
+    doc.text('PROFIT ESTIMATE', M, y); y += 6;
+    const estRows = [
+      ['Sell Price / Bag', 'UGX '+fmt(sellPrice)],
+      ['Cost / Bag', 'UGX '+fmt(Math.round(c.cpb))],
+      ['Estimated Revenue', 'UGX '+fmt(estRevenue)],
+      ['Estimated Profit', (isLoss?'– ':'')+'UGX '+fmt(Math.abs(estProfit))],
+      ['ROI', roi.toFixed(1)+'%  '+(isLoss?'⚠ LOSS':'✓ PROFIT')],
+    ];
+    estRows.forEach(([label, amount]) => {
+      doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(60,80,60);
+      doc.text(label, M+3, y);
+      doc.setFont('helvetica','bold'); doc.setTextColor(isLoss&&label.includes('Profit')?180:26, isLoss&&label.includes('Profit')?30:106, isLoss&&label.includes('Profit')?30:26);
+      doc.text(amount, W-M-3, y, {align:'right'});
+      y += 7;
+    });
+    y += 2;
+  }
+
   // Total bar
   doc.setFillColor(26,58,26); doc.rect(M, y, CW, 12, 'F');
   doc.setTextColor(168,197,160); doc.setFontSize(8); doc.setFont('helvetica','bold');
@@ -1963,6 +2296,14 @@ function printReceipt(format) {
   doc.text('PREPARED', W-M, y, {align:'right'});
 
   doc.save('KataleFlow-Receipt-'+rno+'.pdf');
+}
+
+function fallbackWA(canvas, caption) {
+  const link = document.createElement('a');
+  link.download = 'KataleFlow-Receipt.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+  setTimeout(() => window.open('https://wa.me/?text='+encodeURIComponent(caption),'_blank'), 800);
 }
 
 function printReport(type) {
@@ -2186,6 +2527,14 @@ function fallbackReportWA(canvas, caption, isAgent) {
 
 // ── Tab switching ──
 function switchTab(tab) {
+  // Auto-fill sales setup fields from expenses if blank
+  if (tab === 'sales') {
+    const spEl = $('s-prepared-by');
+    const vpEl = $('s-vehicle-plate');
+    if (spEl && !spEl.value) spEl.value = val('f-yourName');
+    if (vpEl && !vpEl.value) vpEl.value = val('f-vehicleNo');
+  }
+  if (tab === 'profit') renderProfit();
   ['expenses','sales','profit','dashboard'].forEach(t => {
     show('tab-'+t, t===tab);
     const btn = $('tab-btn-'+t);
@@ -2510,7 +2859,124 @@ function updateSalesMetrics() {
 }
 
 // ── Profit ──
+function removeCreditEntry(i) {
+  creditEntries.splice(i, 1);
+  renderCreditEntries();
+  buildMarketReport();
+}
+
+function shareProfit() {
+  const c = calc();
+  const m = mktCalc();
+  const totalExp = c.totalExp + m.total;
+  const rev = salesRevenue();
+  const sold = salesTotalSold();
+  const profit = rev - totalExp;
+  const roi = totalExp > 0 ? (profit / totalExp * 100) : 0;
+  const cpb = c.numBags > 0 ? totalExp / c.numBags : 0;
+  const avg = sold > 0 ? rev / sold : 0;
+  const remaining = c.numBags - sold;
+  const commodity = val('f-commodity') || 'Goods';
+  const country = val('f-country') || '';
+  const isProfit = profit >= 0;
+
+  if (!totalExp && !rev) { alert('Enter expenses and sales data first.'); return; }
+
+  const btn = document.querySelector('#tab-profit .btn-gd');
+  if (btn) { btn.textContent = '⏳ Saving...'; btn.disabled = true; }
+
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'position:fixed;left:-9999px;top:0;width:420px;background:#fff;font-family:-apple-system,BlinkMacSystemFont,sans-serif;';
+  wrap.innerHTML = `
+    <div style="background:#1a3a1a;padding:16px 20px 12px">
+      <div style="font-size:12px;font-weight:700;letter-spacing:.07em;color:#f5ede0">PROFIT SUMMARY</div>
+      <div style="font-size:9px;color:#a8c5a0;margin-top:2px">${commodity.toUpperCase()} — ${country.toUpperCase()}</div>
+      <div style="font-size:9px;color:#c9a84c;margin-top:2px">Katale Flow · ${todayDisp()}</div>
+    </div>
+
+    <!-- Hero -->
+    <div style="background:${isProfit?'#1a3a1a':'#3a1a1a'};padding:16px 20px;text-align:center;border-bottom:3px solid ${isProfit?'#c9a84c':'#f09595'}">
+      <div style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:${isProfit?'#a8c5a0':'#f09595'};margin-bottom:6px">Net ${isProfit?'Profit':'Loss'}</div>
+      <div style="font-family:monospace;font-size:28px;font-weight:700;color:${isProfit?'#c9a84c':'#f09595'}">${isProfit?'+':'– '}UGX ${fmt(Math.abs(profit))}</div>
+      <div style="font-size:10px;color:${isProfit?'#a8c5a0':'#f09595'};margin-top:4px">${fmtD(Math.abs(roi))}% ${isProfit?'return on investment':'loss on investment'}</div>
+    </div>
+
+    <!-- Grid -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#e8e0d4">
+      ${[
+        ['Total Invested','UGX '+fmt(totalExp),'#b82020'],
+        ['Total Revenue','UGX '+fmt(rev),'#1a7a1a'],
+        ['Import Costs','UGX '+fmt(c.totalExp),'#b82020'],
+        ...(m.total>0?[['Market Costs','UGX '+fmt(m.total),'#b82020']]:[]),
+        ['Cost / Bag','UGX '+fmt(Math.round(cpb)),'#1a2e1a'],
+        ['Avg Sale Price','UGX '+fmt(Math.round(avg)),avg>cpb?'#1a7a1a':'#b82020'],
+        ['Bags Sold',sold+' of '+c.numBags,'#1a2e1a'],
+        ...(remaining>0?[['Unsold Bags',remaining+' bags','#b87a00']]:[]),
+      ].map(([label,value,color])=>`
+        <div style="background:#fff;padding:10px 12px">
+          <div style="font-size:8px;font-weight:600;color:#7a6e5f;text-transform:uppercase;margin-bottom:3px">${label}</div>
+          <div style="font-family:monospace;font-size:11px;font-weight:700;color:${color}">${value}</div>
+        </div>`).join('')}
+    </div>
+
+    <!-- Break-even bar -->
+    <div style="padding:12px 20px;background:#f5f9f0;border-top:1px solid #d4c9b8">
+      <div style="font-size:9px;font-weight:700;color:#7a6e5f;text-transform:uppercase;margin-bottom:8px">Revenue vs Expenses</div>
+      ${[
+        ['Import', c.totalExp, '#b82020'],
+        ...(m.total>0?[['Market', m.total, '#e07020']]:[]),
+        ['Revenue', rev, '#2d6a2d'],
+      ].map(([label,val2,color])=>{
+        const maxV=Math.max(totalExp,rev)||1;
+        const pct=Math.round(val2/maxV*100);
+        return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+          <div style="font-size:9px;color:#7a6e5f;width:48px;text-align:right">${label}</div>
+          <div style="flex:1;background:#e8e0d4;border-radius:3px;height:8px">
+            <div style="width:${pct}%;background:${color};height:100%;border-radius:3px"></div>
+          </div>
+          <div style="font-size:9px;font-family:monospace;color:${color};font-weight:600;width:80px">UGX ${fmt(val2)}</div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <div style="background:#1a3a1a;padding:10px 20px;display:flex;justify-content:space-between;align-items:center">
+      <div style="font-size:9px;color:#a8c5a0">Sell-through: <strong style="color:#f5ede0">${c.numBags>0?Math.round(sold/c.numBags*100)+'%':'—'}</strong></div>
+      <div style="font-size:9px;font-weight:700;letter-spacing:.1em;color:#2d6a2d;border:1.5px solid #2d6a2d;padding:3px 8px;border-radius:4px">KATALE FLOW</div>
+    </div>`;
+  document.body.appendChild(wrap);
+
+  html2canvas(wrap, {scale:3, backgroundColor:'#ffffff', useCORS:true, logging:false})
+  .then(canvas => {
+    document.body.removeChild(wrap);
+    const caption = `*PROFIT SUMMARY — ${commodity} (${country})*\n${isProfit?'✅':'❌'} Net ${isProfit?'Profit':'Loss'}: ${isProfit?'+':'– '}UGX ${fmt(Math.abs(profit))}\nROI: ${fmtD(Math.abs(roi))}%\nBags sold: ${sold} of ${c.numBags}\nDate: ${todayDisp()}\n_Sent via Katale Flow_`;
+    canvas.toBlob(blob => {
+      const file = new File([blob], 'KataleFlow-Profit.png', {type:'image/png'});
+      if (navigator.canShare && navigator.canShare({files:[file]})) {
+        navigator.share({files:[file], text:caption})
+        .catch(()=>fallbackProfitWA(canvas, caption));
+      } else {
+        fallbackProfitWA(canvas, caption);
+      }
+      if (btn) { btn.textContent = '💬 WhatsApp'; btn.disabled = false; }
+    }, 'image/png');
+  })
+  .catch(()=>{
+    if (document.body.contains(wrap)) document.body.removeChild(wrap);
+    alert('Could not generate image.');
+    if (btn) { btn.textContent = '💬 WhatsApp'; btn.disabled = false; }
+  });
+}
+
+function fallbackProfitWA(canvas, caption) {
+  const link = document.createElement('a');
+  link.download = 'KataleFlow-Profit.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+  setTimeout(()=>window.open('https://wa.me/?text='+encodeURIComponent(caption),'_blank'), 800);
+}
+
 function renderProfit() {
+  updateOcHidden(); // ensure other costs total is current before calc()
   const c = calc();
   const m = mktCalc();
   const importExp = c.totalExp;
@@ -2993,6 +3459,7 @@ function applyRole() {
 // ── Init ──
 attachListeners();
 attachMoneyFormatting();
+renderOtherCosts();
 renderSales();
 renderHistBadge();
 applyLang();
